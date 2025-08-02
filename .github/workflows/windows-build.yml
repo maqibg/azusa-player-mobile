@@ -45,19 +45,36 @@ jobs:
       run: npx react-native init-windows --template cpp-app --namespace APMWindows --overwrite
       
     - name: Fix Windows App SDK path issues
+      shell: pwsh
       run: |
-        $windowsAppSdkPath = "C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk\1.7.250401001"
-        if (Test-Path $windowsAppSdkPath) {
+        Write-Host "Fixing Windows App SDK path issues..."
+        
+        # Find Windows App SDK package
+        $windowsAppSdkPath = Get-ChildItem "C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk" -Directory | Select-Object -First 1 -ExpandProperty FullName
+        if ($windowsAppSdkPath) {
+          Write-Host "Found Windows App SDK at: $windowsAppSdkPath"
+          
           # Create missing architecture-specific directories
-          New-Item -ItemType Directory -Path "$windowsAppSdkPath\lib\win10-" -Force
-          New-Item -ItemType Directory -Path "$windowsAppSdkPath\runtimes\win-\native" -Force
+          $libWin10Path = "$windowsAppSdkPath\lib\win10-"
+          $runtimeWinPath = "$windowsAppSdkPath\runtimes\win-\native"
+          
+          Write-Host "Creating directory: $libWin10Path"
+          New-Item -ItemType Directory -Path $libWin10Path -Force | Out-Null
+          
+          Write-Host "Creating directory: $runtimeWinPath"  
+          New-Item -ItemType Directory -Path $runtimeWinPath -Force | Out-Null
           
           # Copy x64 files to the missing paths
-          if (Test-Path "$windowsAppSdkPath\lib\win10-x64") {
-            Copy-Item "$windowsAppSdkPath\lib\win10-x64\*" "$windowsAppSdkPath\lib\win10-" -Recurse -Force
+          $libX64Path = "$windowsAppSdkPath\lib\win10-x64"
+          if (Test-Path $libX64Path) {
+            Write-Host "Copying from $libX64Path to $libWin10Path"
+            Copy-Item "$libX64Path\*" $libWin10Path -Recurse -Force
           }
-          if (Test-Path "$windowsAppSdkPath\runtimes\win-x64\native") {
-            Copy-Item "$windowsAppSdkPath\runtimes\win-x64\native\*" "$windowsAppSdkPath\runtimes\win-\native" -Recurse -Force
+          
+          $runtimeX64Path = "$windowsAppSdkPath\runtimes\win-x64\native"
+          if (Test-Path $runtimeX64Path) {
+            Write-Host "Copying from $runtimeX64Path to $runtimeWinPath"
+            Copy-Item "$runtimeX64Path\*" $runtimeWinPath -Recurse -Force
           }
         }
         
@@ -67,11 +84,17 @@ jobs:
           $hermesVersion = Get-ChildItem $hermesPath -Directory | Select-Object -First 1 -ExpandProperty Name
           if ($hermesVersion) {
             $hermesDllPath = "$hermesPath\$hermesVersion\build\native\uwp"
-            if (Test-Path "$hermesDllPath\x64\hermes.dll" -and !(Test-Path "$hermesDllPath\hermes.dll")) {
-              Copy-Item "$hermesDllPath\x64\hermes.dll" "$hermesDllPath\hermes.dll" -Force
+            $hermesX64Dll = "$hermesDllPath\x64\hermes.dll"
+            $hermesTargetDll = "$hermesDllPath\hermes.dll"
+            
+            if ((Test-Path $hermesX64Dll) -and !(Test-Path $hermesTargetDll)) {
+              Write-Host "Copying Hermes DLL from $hermesX64Dll to $hermesTargetDll"
+              Copy-Item $hermesX64Dll $hermesTargetDll -Force
             }
           }
         }
+        
+        Write-Host "Path fixes completed."
       
     - name: Build Windows app (Release x64)
       run: npx react-native run-windows --arch x64 --release --no-launch
