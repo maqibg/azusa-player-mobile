@@ -44,7 +44,34 @@ jobs:
     - name: Initialize Windows project
       run: npx react-native init-windows --template cpp-app --namespace APMWindows --overwrite
       
-    - name: Build Windows app (Debug x64)
+    - name: Fix Windows App SDK path issues
+      run: |
+        $windowsAppSdkPath = "C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk\1.7.250401001"
+        if (Test-Path $windowsAppSdkPath) {
+          # Create missing architecture-specific directories
+          New-Item -ItemType Directory -Path "$windowsAppSdkPath\lib\win10-" -Force
+          New-Item -ItemType Directory -Path "$windowsAppSdkPath\runtimes\win-\native" -Force
+          
+          # Copy x64 files to the missing paths
+          if (Test-Path "$windowsAppSdkPath\lib\win10-x64") {
+            Copy-Item "$windowsAppSdkPath\lib\win10-x64\*" "$windowsAppSdkPath\lib\win10-" -Recurse -Force
+          }
+          if (Test-Path "$windowsAppSdkPath\runtimes\win-x64\native") {
+            Copy-Item "$windowsAppSdkPath\runtimes\win-x64\native\*" "$windowsAppSdkPath\runtimes\win-\native" -Recurse -Force
+          }
+        }
+        
+        # Fix Hermes DLL path issue
+        $hermesPath = "C:\Users\runneradmin\.nuget\packages\microsoft.javascript.hermes"
+        $hermesVersion = Get-ChildItem $hermesPath -Directory | Select-Object -First 1 -ExpandProperty Name
+        if ($hermesVersion) {
+          $hermesDllPath = "$hermesPath\$hermesVersion\build\native\uwp"
+          if (Test-Path "$hermesDllPath\x64\hermes.dll" -and !(Test-Path "$hermesDllPath\hermes.dll")) {
+            Copy-Item "$hermesDllPath\x64\hermes.dll" "$hermesDllPath\hermes.dll" -Force
+          }
+        }
+      
+    - name: Build Windows app (Release x64)
       run: npx react-native run-windows --arch x64 --release --no-launch
       
     - name: Upload Windows build artifacts
