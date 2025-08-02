@@ -49,11 +49,30 @@ jobs:
       run: |
         Write-Host "Fixing Windows App SDK path issues..."
         
-        # Find Windows App SDK package
-        $windowsAppSdkPath = Get-ChildItem "C:\Users\runneradmin\.nuget\packages\microsoft.windowsappsdk" -Directory | Select-Object -First 1 -ExpandProperty FullName
+        # Find all possible NuGet package locations
+        $possiblePaths = @(
+          "C:\Users\runneradmin\.nuget\packages",
+          "$env:USERPROFILE\.nuget\packages",
+          "$env:NUGET_PACKAGES",
+          "windows\packages"
+        )
+        
+        $windowsAppSdkPath = $null
+        foreach ($basePath in $possiblePaths) {
+          if ($basePath -and (Test-Path $basePath)) {
+            Write-Host "Checking path: $basePath"
+            $sdkPath = Join-Path $basePath "microsoft.windowsappsdk"
+            if (Test-Path $sdkPath) {
+              $windowsAppSdkPath = Get-ChildItem $sdkPath -Directory | Select-Object -First 1 -ExpandProperty FullName
+              if ($windowsAppSdkPath) {
+                Write-Host "Found Windows App SDK at: $windowsAppSdkPath"
+                break
+              }
+            }
+          }
+        }
+        
         if ($windowsAppSdkPath) {
-          Write-Host "Found Windows App SDK at: $windowsAppSdkPath"
-          
           # Create missing architecture-specific directories
           $libWin10Path = "$windowsAppSdkPath\lib\win10-"
           $runtimeWinPath = "$windowsAppSdkPath\runtimes\win-\native"
@@ -76,22 +95,35 @@ jobs:
             Write-Host "Copying from $runtimeX64Path to $runtimeWinPath"
             Copy-Item "$runtimeX64Path\*" $runtimeWinPath -Recurse -Force
           }
+        } else {
+          Write-Host "Windows App SDK package not found, skipping path fixes"
         }
         
         # Fix Hermes DLL path issue
-        $hermesPath = "C:\Users\runneradmin\.nuget\packages\microsoft.javascript.hermes"
-        if (Test-Path $hermesPath) {
-          $hermesVersion = Get-ChildItem $hermesPath -Directory | Select-Object -First 1 -ExpandProperty Name
-          if ($hermesVersion) {
-            $hermesDllPath = "$hermesPath\$hermesVersion\build\native\uwp"
-            $hermesX64Dll = "$hermesDllPath\x64\hermes.dll"
-            $hermesTargetDll = "$hermesDllPath\hermes.dll"
-            
-            if ((Test-Path $hermesX64Dll) -and !(Test-Path $hermesTargetDll)) {
-              Write-Host "Copying Hermes DLL from $hermesX64Dll to $hermesTargetDll"
-              Copy-Item $hermesX64Dll $hermesTargetDll -Force
+        $hermesFound = $false
+        foreach ($basePath in $possiblePaths) {
+          if ($basePath -and (Test-Path $basePath)) {
+            $hermesPath = Join-Path $basePath "microsoft.javascript.hermes"
+            if (Test-Path $hermesPath) {
+              $hermesVersion = Get-ChildItem $hermesPath -Directory | Select-Object -First 1 -ExpandProperty Name
+              if ($hermesVersion) {
+                $hermesDllPath = "$hermesPath\$hermesVersion\build\native\uwp"
+                $hermesX64Dll = "$hermesDllPath\x64\hermes.dll"
+                $hermesTargetDll = "$hermesDllPath\hermes.dll"
+                
+                if ((Test-Path $hermesX64Dll) -and !(Test-Path $hermesTargetDll)) {
+                  Write-Host "Copying Hermes DLL from $hermesX64Dll to $hermesTargetDll"
+                  Copy-Item $hermesX64Dll $hermesTargetDll -Force
+                  $hermesFound = $true
+                }
+                break
+              }
             }
           }
+        }
+        
+        if (-not $hermesFound) {
+          Write-Host "Hermes package not found, skipping Hermes DLL fix"
         }
         
         Write-Host "Path fixes completed."
