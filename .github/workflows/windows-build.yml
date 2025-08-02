@@ -22,13 +22,15 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'yarn'
         
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
       
-    - name: Install Yarn
-      run: npm install -g yarn
+    - name: Enable Corepack
+      run: corepack enable
+      
+    - name: Install correct Yarn version
+      run: corepack prepare yarn@4.9.1 --activate
       
     - name: Install dependencies
       run: yarn install --frozen-lockfile
