@@ -63,11 +63,13 @@ jobs:
         
         # Fix Hermes DLL path issue
         $hermesPath = "C:\Users\runneradmin\.nuget\packages\microsoft.javascript.hermes"
-        $hermesVersion = Get-ChildItem $hermesPath -Directory | Select-Object -First 1 -ExpandProperty Name
-        if ($hermesVersion) {
-          $hermesDllPath = "$hermesPath\$hermesVersion\build\native\uwp"
-          if (Test-Path "$hermesDllPath\x64\hermes.dll" -and !(Test-Path "$hermesDllPath\hermes.dll")) {
-            Copy-Item "$hermesDllPath\x64\hermes.dll" "$hermesDllPath\hermes.dll" -Force
+        if (Test-Path $hermesPath) {
+          $hermesVersion = Get-ChildItem $hermesPath -Directory | Select-Object -First 1 -ExpandProperty Name
+          if ($hermesVersion) {
+            $hermesDllPath = "$hermesPath\$hermesVersion\build\native\uwp"
+            if (Test-Path "$hermesDllPath\x64\hermes.dll" -and !(Test-Path "$hermesDllPath\hermes.dll")) {
+              Copy-Item "$hermesDllPath\x64\hermes.dll" "$hermesDllPath\hermes.dll" -Force
+            }
           }
         }
       
