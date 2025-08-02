@@ -7,6 +7,18 @@
     "expo-sqlite"
   ],
   "expo": {
-    "scheme": "com.noxplayer"
+    "name": "Azusa Player",
+    "slug": "azusa-player-mobile",
+    "version": "4.0.0",
+    "scheme": "com.noxplayer",
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
   }
 }

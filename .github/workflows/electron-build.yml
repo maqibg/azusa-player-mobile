@@ -1,0 +1,115 @@
+name: Electron Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-electron:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Enable Corepack
+      run: corepack enable
+      
+    - name: Install correct Yarn version
+      run: corepack prepare yarn@4.9.1 --activate
+      
+    - name: Install dependencies
+      run: yarn install --immutable
+      
+    - name: Apply patches
+      run: yarn postinstall
+      
+    - name: Compile TypeScript
+      run: yarn compile
+      
+    - name: Build Web version
+      run: yarn web:build
+      
+    - name: Build Electron app
+      run: yarn electron:build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+    - name: Upload Electron artifacts (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: electron-windows
+        path: dist-electron/*.exe
+        retention-days: 7
+        
+    - name: Upload Electron artifacts (macOS)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: electron-macos
+        path: dist-electron/*.dmg
+        retention-days: 7
+        
+    - name: Upload Electron artifacts (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: electron-linux
+        path: dist-electron/*.AppImage
+        retention-days: 7
+
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Enable Corepack
+      run: corepack enable
+      
+    - name: Install correct Yarn version
+      run: corepack prepare yarn@4.9.1 --activate
+      
+    - name: Install dependencies
+      run: yarn install --immutable
+      
+    - name: Apply patches
+      run: yarn postinstall
+      
+    - name: Compile TypeScript
+      run: yarn compile
+      
+    - name: Build Web version
+      run: yarn web:build
+      
+    - name: Upload Web build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-build
+        path: dist/
+        retention-days: 7

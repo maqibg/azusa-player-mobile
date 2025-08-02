@@ -7,7 +7,10 @@
     "android:ide": "open -a /Applications/Android\\ Studio.app ./android",
     "ios": "react-native run-ios",
     "ios:ide": "open ios/*.xcworkspace/",
-    "windows": "react-native run-windows",
+    "web": "npx expo start --web",
+    "web:build": "npx expo export --platform web",
+    "electron": "electron .",
+    "electron:build": "yarn web:build && electron-builder",
     "start": "react-native start",
     "test": "jest",
     "lint": "yarn compile; yarn ci:lint; yarn ci:format",
@@ -140,7 +143,6 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-video": "6.15.0",
     "react-native-webview": "13.15.0",
-    "react-native-windows": "0.79.3",
     "sp-react-native-in-app-updates": "^1.5.0",
     "text-encoding-polyfill": "^0.6.7",
     "use-debounce": "^10.0.5",
@@ -206,10 +208,51 @@
     "react-test-renderer": "19.0.0",
     "reactotron-react-native": "^5.1.14",
     "rimraf": "^6.0.1",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "electron": "^33.0.2",
+    "electron-builder": "^25.1.8"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "main": "electron.js",
+  "homepage": "./",
+  "build": {
+    "appId": "com.azusaplayer.mobile",
+    "productName": "Azusa Player",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron.js",
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ]
+    }
   },
   "isSwift": true,
   "packageManager": "yarn@4.9.1"
